@@ -3,6 +3,7 @@ import { getConfig } from '../../core/config';
 import { PredicteCommitConfig } from '../../core/types';
 import { getEffectiveProviderId } from '../../core/logic';
 import { DEFAULT_LOCAL_URL } from '../../core/constants';
+import { DEFAULT_SYSTEM_PROMPT } from '../../ai/prompt';
 
 suite('Config Test Suite', () => {
   test('getEffectiveProviderId', () => {
@@ -13,6 +14,7 @@ suite('Config Test Suite', () => {
       localProvider: 'ollama',
       models: [],
       ignoredFiles: [],
+      systemPrompt: DEFAULT_SYSTEM_PROMPT,
       localBaseUrl: '',
       localModel: '',
       debugLogging: false,
@@ -52,6 +54,7 @@ suite('Config Test Suite', () => {
     assert.strictEqual(cfg.useLocal, false);
     assert.strictEqual(cfg.localProvider, 'ollama');
     assert.deepStrictEqual(cfg.ignoredFiles, ['*-lock.json', '*.svg', 'dist/**']);
+    assert.strictEqual(cfg.systemPrompt, DEFAULT_SYSTEM_PROMPT);
     assert.strictEqual(cfg.localBaseUrl, DEFAULT_LOCAL_URL);
     assert.strictEqual(cfg.localModel, '');
   });
