@@ -7,7 +7,6 @@ import { toRepoRelativePosixPath } from './utils/paths';
 import { isIgnored } from './utils/ignore';
 import { getStagedDiff } from './modules/git/diff';
 import { capDiffsByFileAndTotal } from './utils/truncate';
-import { SYSTEM_PROMPT } from './ai/prompt';
 import { ProviderError } from './ai/errors';
 import { selectProvider } from './ai/selector';
 import { logDebug } from './core/logging';
@@ -223,13 +222,13 @@ export async function generateMessageCommand(
       const userPrompt = `Diff:\n${boundedDiff}`;
       logDebug(cfg.debugLogging, [
         '--- systemPrompt ---',
-        SYSTEM_PROMPT,
+        cfg.systemPrompt,
         '--- userPrompt (Diff) ---',
         userPrompt,
       ]);
 
       try {
-        const result = await provider.generate({ systemPrompt: SYSTEM_PROMPT, userPrompt });
+        const result = await provider.generate({ systemPrompt: cfg.systemPrompt, userPrompt });
         logDebug(cfg.debugLogging, [
           `providerId: ${result.providerId}`,
           result.model ? `model: ${result.model}` : 'model: (unknown)',
