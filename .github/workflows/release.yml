@@ -1,27 +1,22 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      dryRun:
-        description: 'Dry Run'
-        required: false
-        default: 'false'
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write
-  issues: write
-  pull-requests: write
 
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    env:
+      VSIX_PATH: predicte-commit-${{ github.ref_name }}.vsix
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -32,13 +27,41 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Verify tag matches package version
         run: |
-          if [ "${{ inputs.dryRun }}" == "true" ]; then
-            npx semantic-release --dry-run
-          else
-            npx semantic-release
+          tag_version="${GITHUB_REF_NAME#v}"
+          package_version="$(node -p "require('./package.json').version")"
+
+          if [ "$tag_version" != "$package_version" ]; then
+            echo "Tag version ($tag_version) does not match package.json version ($package_version)."
+            exit 1
           fi
+
+      - name: Run validators
+        run: |
+          npm run check-types
+          npm run lint
+          npm test
+
+      # Not verified end-to-end in GitHub Actions yet.
+      # We are not fully sure that `npx @vscode/vsce ...` resolves correctly in CI,
+      # because the package-name form failed locally while `npm exec vsce ...` worked.
+      - name: Build VSIX
+        run: npx @vscode/vsce package --out "$VSIX_PATH"
+
+      # Also not verified against the real Marketplace from this workflow yet.
+      # If this step fails in CI, switch to `npm exec vsce publish -- ...`.
+      - name: Publish to Visual Studio Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx @vscode/vsce publish --packagePath "$VSIX_PATH" -p "$VSCE_PAT"
+
+      # This step itself looks more straightforward than the VSIX steps:
+      # it uses `contents: write` plus a standard GitHub release action.
+      # But it is still not verified end-to-end here, and it only runs if all
+      # previous steps succeed.
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.VSIX_PATH }}
+          generate_release_notes: true
