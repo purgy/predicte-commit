@@ -5,6 +5,8 @@ import {
   generateMessageCommand,
   maybePromptForApiKeyOnStartup,
   setApiKeyCommand,
+  setOpenAiCompatibleApiKeyCommand,
+  setOpenAiCompatibleBaseUrlCommand,
 } from './commands';
 
 // This method is called when your extension is activated
@@ -14,6 +16,12 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('predicteCommit.setApiKey', () => setApiKeyCommand(context)),
+    vscode.commands.registerCommand('predicteCommit.setOpenAiCompatibleApiKey', () =>
+      setOpenAiCompatibleApiKeyCommand(context),
+    ),
+    vscode.commands.registerCommand('predicteCommit.setOpenAiCompatibleBaseUrl', () =>
+      setOpenAiCompatibleBaseUrlCommand(),
+    ),
     vscode.commands.registerCommand('predicteCommit.generateMessage', (arg?: unknown) =>
       generateMessageCommand(context, arg),
     ),

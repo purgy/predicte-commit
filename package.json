@@ -49,6 +49,14 @@
       {
         "command": "predicteCommit.setApiKey",
         "title": "Predicte Commit: Set API Key"
+      },
+      {
+        "command": "predicteCommit.setOpenAiCompatibleApiKey",
+        "title": "Predicte Commit: Set OpenAI Compatible API_KEY"
+      },
+      {
+        "command": "predicteCommit.setOpenAiCompatibleBaseUrl",
+        "title": "Predicte Commit: Set OpenAI Compatible API_BASE_URL"
       }
     ],
     "menus": {
@@ -58,6 +66,12 @@
         },
         {
           "command": "predicteCommit.setApiKey"
+        },
+        {
+          "command": "predicteCommit.setOpenAiCompatibleApiKey"
+        },
+        {
+          "command": "predicteCommit.setOpenAiCompatibleBaseUrl"
         }
       ],
       "scm/title": [
@@ -74,7 +88,8 @@
           "type": "string",
           "default": "mistral",
           "enum": [
-            "mistral"
+            "mistral",
+            "openai-compatible"
           ],
           "description": "Choose provider (default: mistral).",
           "order": 1
@@ -107,6 +122,18 @@
           "editPresentation": "multilineText",
           "markdownDescription": "System prompt used to generate commit messages. You can customize it in VS Code settings.",
           "order": 4
+        },
+        "predicteCommit.openaiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "API_BASE_URL for an OpenAI compatible API, for example https://api.openai.com/v1 or https://your-provider.example/v1.",
+          "order": 5
+        },
+        "predicteCommit.openaiModel": {
+          "type": "string",
+          "default": "",
+          "description": "Fallback model for the OpenAI compatible provider. If predicteCommit.models is set, that list is used instead.",
+          "order": 6
         },
         "predicteCommit.useLocal": {
           "type": "boolean",

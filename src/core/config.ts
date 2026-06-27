@@ -13,6 +13,8 @@ export function getConfig(): PredicteCommitConfig {
     models: cfg.get<string[]>('models', []),
     ignoredFiles: cfg.get<string[]>('ignoredFiles', ['*-lock.json', '*.svg', 'dist/**']),
     systemPrompt: systemPrompt.length > 0 ? systemPrompt : DEFAULT_SYSTEM_PROMPT,
+    openaiBaseUrl: cfg.get<string>('openaiBaseUrl', ''),
+    openaiModel: cfg.get<string>('openaiModel', ''),
     useLocal,
     localProvider: cfg.get<string>('localProvider', 'ollama'),
     localBaseUrl: cfg.get<string>('localBaseUrl', DEFAULT_LOCAL_URL),
