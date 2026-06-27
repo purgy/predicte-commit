@@ -15,6 +15,8 @@ suite('Config Test Suite', () => {
       models: [],
       ignoredFiles: [],
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      openaiBaseUrl: '',
+      openaiModel: '',
       localBaseUrl: '',
       localModel: '',
       debugLogging: false,
@@ -55,6 +57,8 @@ suite('Config Test Suite', () => {
     assert.strictEqual(cfg.localProvider, 'ollama');
     assert.deepStrictEqual(cfg.ignoredFiles, ['*-lock.json', '*.svg', 'dist/**']);
     assert.strictEqual(cfg.systemPrompt, DEFAULT_SYSTEM_PROMPT);
+    assert.strictEqual(cfg.openaiBaseUrl, '');
+    assert.strictEqual(cfg.openaiModel, '');
     assert.strictEqual(cfg.localBaseUrl, DEFAULT_LOCAL_URL);
     assert.strictEqual(cfg.localModel, '');
   });

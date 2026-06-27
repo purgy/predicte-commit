@@ -3,6 +3,8 @@ export type PredicteCommitConfig = {
   models: string[];
   ignoredFiles: string[];
   systemPrompt: string;
+  openaiBaseUrl: string;
+  openaiModel: string;
   useLocal: boolean;
   localProvider: string;
   localBaseUrl: string;

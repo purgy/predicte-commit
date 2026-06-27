@@ -17,4 +17,50 @@ suite('HTTP Error Handling', () => {
       assert.ok(e.message.includes(url), `Expected URL in error message '${e.message}'`);
     }
   });
+
+  test('retries with stream=true when provider requires it', async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ body?: string }> = [];
+
+    globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+      requests.push({ body: typeof init?.body === 'string' ? init.body : undefined });
+      if (requests.length === 1) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              message: '{"detail":"Stream must be set to true"}',
+            },
+          }),
+          {
+            status: 400,
+            statusText: 'Bad Request',
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
+
+      return new Response(
+        'data: {"choices":[{"delta":{"content":"feat: "}}]}\n\ndata: {"choices":[{"delta":{"content":"add support"}}]}\n\ndata: [DONE]\n',
+        {
+          status: 200,
+          statusText: 'OK',
+          headers: { 'Content-Type': 'text/event-stream' },
+        },
+      );
+    }) as typeof fetch;
+
+    try {
+      const result = await postChatCompletion('https://example.com/v1/chat/completions', 'key', {
+        model: 'test-model',
+        messages: [],
+      });
+
+      assert.strictEqual(result, 'feat: add support');
+      assert.strictEqual(requests.length, 2);
+      assert.strictEqual(JSON.parse(requests[0].body ?? '{}').stream, undefined);
+      assert.strictEqual(JSON.parse(requests[1].body ?? '{}').stream, true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

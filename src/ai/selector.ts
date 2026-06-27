@@ -6,6 +6,7 @@ import { getProviderDefinition } from './registry';
 
 // Import providers to ensure they register themselves
 import '../providers/mistral';
+import '../providers/openaiCompatible';
 import '../providers/local';
 
 export async function selectProvider(

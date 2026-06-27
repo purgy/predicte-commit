@@ -28,6 +28,8 @@ suite('AI Selector Test Suite', () => {
       models: [],
       ignoredFiles: [],
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      openaiBaseUrl: '',
+      openaiModel: '',
       localBaseUrl: '',
       localModel: '',
       debugLogging: false,
@@ -48,6 +50,8 @@ suite('AI Selector Test Suite', () => {
       models: [],
       ignoredFiles: [],
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      openaiBaseUrl: '',
+      openaiModel: '',
       localBaseUrl: '',
       localModel: '',
       debugLogging: false,
@@ -66,6 +70,8 @@ suite('AI Selector Test Suite', () => {
       models: [],
       ignoredFiles: [],
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      openaiBaseUrl: '',
+      openaiModel: '',
       localBaseUrl: '',
       localModel: '',
       debugLogging: false,
@@ -79,5 +85,30 @@ suite('AI Selector Test Suite', () => {
 
     const client = await selectProvider(contextMock, configMock);
     assert.strictEqual(client.id, 'mistral');
+  });
+
+  test('selectProvider instantiates OpenAI compatible provider with context', async () => {
+    const configMock: PredicteCommitConfig = {
+      provider: 'openai-compatible',
+      useLocal: false,
+      localProvider: 'ollama',
+      models: [],
+      ignoredFiles: [],
+      systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      openaiBaseUrl: 'https://example.com/v1',
+      openaiModel: 'gpt-4o-mini',
+      localBaseUrl: '',
+      localModel: '',
+      debugLogging: false,
+    };
+
+    const contextMock: any = {
+      secrets: {
+        get: async () => 'fake-key',
+      },
+    };
+
+    const client = await selectProvider(contextMock, configMock);
+    assert.strictEqual(client.id, 'openai-compatible');
   });
 });
