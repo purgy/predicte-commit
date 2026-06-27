@@ -1,4 +1,4 @@
-export const SYSTEM_PROMPT = `You are an expert developer.
+export const DEFAULT_SYSTEM_PROMPT = `You are an expert developer.
 
 Task: Write a concise git commit message for the provided code diff.
 

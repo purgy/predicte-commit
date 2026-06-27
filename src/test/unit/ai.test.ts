@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import { selectProvider } from '../../ai/selector';
 import { registerProvider } from '../../ai/registry';
+import { DEFAULT_SYSTEM_PROMPT } from '../../ai/prompt';
 import { PredicteCommitConfig } from '../../core/types';
 import { ProviderClient, GenerateRequest, GenerateResult } from '../../ai/types';
 
@@ -26,6 +27,7 @@ suite('AI Selector Test Suite', () => {
       localProvider: 'ollama',
       models: [],
       ignoredFiles: [],
+      systemPrompt: DEFAULT_SYSTEM_PROMPT,
       localBaseUrl: '',
       localModel: '',
       debugLogging: false,
@@ -45,6 +47,7 @@ suite('AI Selector Test Suite', () => {
       localProvider: 'ollama',
       models: [],
       ignoredFiles: [],
+      systemPrompt: DEFAULT_SYSTEM_PROMPT,
       localBaseUrl: '',
       localModel: '',
       debugLogging: false,
@@ -62,6 +65,7 @@ suite('AI Selector Test Suite', () => {
       localProvider: 'ollama',
       models: [],
       ignoredFiles: [],
+      systemPrompt: DEFAULT_SYSTEM_PROMPT,
       localBaseUrl: '',
       localModel: '',
       debugLogging: false,

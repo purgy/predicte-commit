@@ -2,7 +2,7 @@
   "name": "predicte-commit",
   "displayName": "Predicte AI Commit Message Generator",
   "description": "Automatically generate git commit messages using AI for FREE following conventional commits guidelines. Powered by Mistral AI or Local LLMs (Ollama, vLLM, LMstudio)",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "predicte",
   "license": "MIT",
   "repository": {
@@ -101,6 +101,13 @@
           "description": "Glob patterns (repo-relative) to exclude from staged diff context",
           "order": 3
         },
+        "predicteCommit.systemPrompt": {
+          "type": "string",
+          "default": "You are an expert developer.\n\nTask: Write a concise git commit message for the provided code diff.\n\nRules:\n1. Output MUST be a single commit message.\n2. First line MUST be exactly one Conventional Commits subject line (e.g., 'feat: add user login').\n3. The subject line must be under 50 characters and summarize the ENTIRE change set.\n4. Do NOT output multiple subject lines (no multiple 'type:' headers).\n5. If needed, add a blank line and then a bulleted body using '- ' bullets.\n6. Do NOT output markdown code blocks or fences. Output ONLY raw commit message text.\n7. Choose the commit type based on the overall change set. Use 'docs:' only when ALL changes are documentation-only; if the changes include code/config/deps, prefer 'chore:' or 'refactor:' as appropriate.\n8. The subject should summarize the whole set and mention the most significant non-doc change if present.\n9. If the diff is empty or trivial, reply with a short error message.",
+          "editPresentation": "multilineText",
+          "markdownDescription": "System prompt used to generate commit messages. You can customize it in VS Code settings.",
+          "order": 4
+        },
         "predicteCommit.useLocal": {
           "type": "boolean",
           "default": false,
@@ -151,6 +158,7 @@
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "node ./node_modules/typescript/bin/tsc --noEmit --watch --project tsconfig.json",
     "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "package:local": "node package-local-vsix.js",
     "compile-tests": "node ./node_modules/typescript/bin/tsc -p . --outDir out",
     "watch-tests": "node ./node_modules/typescript/bin/tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
@@ -170,29 +178,29 @@
     ]
   },
   "devDependencies": {
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^12.0.2",
-    "@semantic-release/npm": "^13.1.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.108.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.27.2",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "mocha": "^11.7.5",
+    "mocha": "^11.3.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.8.0",
-    "semantic-release": "^25.0.2",
-    "semantic-release-vsce": "^6.0.21",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.52.0"
   },
   "dependencies": {
     "minimatch": "^10.0.3"
+  },
+  "overrides": {
+    "diff": "^9.0.0",
+    "serialize-javascript": "^7.0.6",
+    "undici": "^6.27.0"
   }
 }

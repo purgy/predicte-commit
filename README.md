@@ -60,6 +60,29 @@ _This extension is for developers who want to automate the tedious task of writi
 | `predicteCommit.localModel`    | _(empty)_                             | Model name for local provider.                                   |
 | `predicteCommit.debugLogging`  | `false`                               | Log prompt payload and diagnostics to the output channel.        |
 
+## Build VSIX Locally
+
+Local VSIX packaging is configured without publishing to Visual Studio Marketplace.
+
+### Standard VSIX build
+
+```bash
+npm ci
+npm exec vsce package
+```
+
+This creates a file like `predicte-commit-1.0.2.vsix` in the project root.
+
+### Local build with personal ignore rules
+
+If you use a local `.vscodeignore.local`, run:
+
+```bash
+npm run package:local
+```
+
+This also creates a local `.vsix`, but merges `.vscodeignore` with your personal `.vscodeignore.local` rules first.
+
 ## Contributing
 
 We love contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) to get started.
