@@ -63,4 +63,94 @@ suite('HTTP Error Handling', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  test('uses proxy dispatcher when HTTPS_PROXY is set', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalHttpProxy = process.env.HTTP_PROXY;
+    const originalHttpsProxy = process.env.HTTPS_PROXY;
+    delete process.env.HTTP_PROXY;
+    process.env.HTTPS_PROXY = 'http://proxy.local:8080';
+
+    let dispatcherSeen: unknown;
+    globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+      dispatcherSeen = (init as RequestInit & { dispatcher?: unknown })?.dispatcher;
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: 'feat: proxy support' } }],
+        }),
+        {
+          status: 200,
+          statusText: 'OK',
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }) as typeof fetch;
+
+    try {
+      const result = await postChatCompletion('https://example.com/v1/chat/completions', 'key', {
+        model: 'test-model',
+        messages: [],
+      });
+
+      assert.strictEqual(result, 'feat: proxy support');
+      assert.ok(dispatcherSeen, 'Expected a proxy dispatcher to be passed to fetch');
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalHttpProxy === undefined) {
+        delete process.env.HTTP_PROXY;
+      } else {
+        process.env.HTTP_PROXY = originalHttpProxy;
+      }
+      if (originalHttpsProxy === undefined) {
+        delete process.env.HTTPS_PROXY;
+      } else {
+        process.env.HTTPS_PROXY = originalHttpsProxy;
+      }
+    }
+  });
+
+  test('skips proxy dispatcher when NO_PROXY matches target host', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalHttpsProxy = process.env.HTTPS_PROXY;
+    const originalNoProxy = process.env.NO_PROXY;
+    process.env.HTTPS_PROXY = 'http://proxy.local:8080';
+    process.env.NO_PROXY = 'example.com';
+
+    let dispatcherSeen: unknown;
+    globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+      dispatcherSeen = (init as RequestInit & { dispatcher?: unknown })?.dispatcher;
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: 'feat: bypass proxy' } }],
+        }),
+        {
+          status: 200,
+          statusText: 'OK',
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }) as typeof fetch;
+
+    try {
+      const result = await postChatCompletion('https://example.com/v1/chat/completions', 'key', {
+        model: 'test-model',
+        messages: [],
+      });
+
+      assert.strictEqual(result, 'feat: bypass proxy');
+      assert.strictEqual(dispatcherSeen, undefined);
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalHttpsProxy === undefined) {
+        delete process.env.HTTPS_PROXY;
+      } else {
+        process.env.HTTPS_PROXY = originalHttpsProxy;
+      }
+      if (originalNoProxy === undefined) {
+        delete process.env.NO_PROXY;
+      } else {
+        process.env.NO_PROXY = originalNoProxy;
+      }
+    }
+  });
 });

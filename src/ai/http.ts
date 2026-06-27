@@ -1,4 +1,5 @@
 import { ProviderError } from './errors';
+import { ProxyAgent } from 'undici';
 
 type ChatCompletionRequest = {
   model: string;
@@ -6,10 +7,108 @@ type ChatCompletionRequest = {
   stream?: boolean;
 };
 
+type FetchRequestInit = RequestInit & {
+  dispatcher?: InstanceType<typeof ProxyAgent>;
+};
+
+const proxyAgents = new Map<string, InstanceType<typeof ProxyAgent>>();
+
 function withTimeout(ms: number): AbortController {
   const controller = new AbortController();
   setTimeout(() => controller.abort(), ms).unref?.();
   return controller;
+}
+
+function getEnvValue(name: string): string | undefined {
+  const value = process.env[name] ?? process.env[name.toLowerCase()];
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function matchesNoProxy(target: URL, entry: string): boolean {
+  const normalized = entry.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+  if (normalized === '*') {
+    return true;
+  }
+
+  const [hostPatternRaw, port] = normalized.split(':', 2);
+  const hostPattern = hostPatternRaw.replace(/^\./, '');
+  const hostname = target.hostname.toLowerCase();
+
+  if (port && target.port && target.port !== port) {
+    return false;
+  }
+
+  return hostname === hostPattern || hostname.endsWith(`.${hostPattern}`);
+}
+
+function shouldBypassProxy(targetUrl: string): boolean {
+  const noProxy = getEnvValue('NO_PROXY');
+  if (!noProxy) {
+    return false;
+  }
+
+  const target = new URL(targetUrl);
+  return noProxy
+    .split(/[,\s]+/)
+    .filter((entry) => entry.length > 0)
+    .some((entry) => matchesNoProxy(target, entry));
+}
+
+function getProxyConfig(targetUrl: string): { proxyUrl?: string; envName?: string } {
+  const target = new URL(targetUrl);
+
+  if (shouldBypassProxy(targetUrl)) {
+    return {};
+  }
+
+  if (target.protocol === 'https:') {
+    const httpsProxy = getEnvValue('HTTPS_PROXY');
+    if (httpsProxy) {
+      return {
+        proxyUrl: httpsProxy,
+        envName: process.env.HTTPS_PROXY ? 'HTTPS_PROXY' : 'https_proxy',
+      };
+    }
+
+    const httpProxy = getEnvValue('HTTP_PROXY');
+    if (httpProxy) {
+      return { proxyUrl: httpProxy, envName: process.env.HTTP_PROXY ? 'HTTP_PROXY' : 'http_proxy' };
+    }
+  }
+
+  if (target.protocol === 'http:') {
+    const httpProxy = getEnvValue('HTTP_PROXY');
+    if (httpProxy) {
+      return { proxyUrl: httpProxy, envName: process.env.HTTP_PROXY ? 'HTTP_PROXY' : 'http_proxy' };
+    }
+  }
+
+  return {};
+}
+
+function getProxyDispatcher(targetUrl: string): InstanceType<typeof ProxyAgent> | undefined {
+  const { proxyUrl, envName } = getProxyConfig(targetUrl);
+  if (!proxyUrl) {
+    return undefined;
+  }
+
+  let agent = proxyAgents.get(proxyUrl);
+  if (!agent) {
+    try {
+      agent = new ProxyAgent(proxyUrl);
+    } catch {
+      throw new ProviderError(
+        `Invalid proxy URL in ${envName ?? 'proxy environment variable'}: ${proxyUrl}`,
+      );
+    }
+    proxyAgents.set(proxyUrl, agent);
+  }
+
+  return agent;
 }
 
 export async function postChatCompletion(
@@ -45,12 +144,19 @@ async function postChatCompletionOnce(
 
   let res: Response;
   try {
-    res = await fetch(url, {
+    const init: FetchRequestInit = {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
       signal: controller.signal,
-    });
+    };
+
+    const dispatcher = getProxyDispatcher(url);
+    if (dispatcher) {
+      init.dispatcher = dispatcher;
+    }
+
+    res = await fetch(url, init);
   } catch (e) {
     if (e instanceof Error) {
       if (e.name === 'AbortError') {
