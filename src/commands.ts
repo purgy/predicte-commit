@@ -11,6 +11,7 @@ import { ProviderError } from './ai/errors';
 import { selectProvider } from './ai/selector';
 import { logDebug } from './core/logging';
 import { PROVIDER_REGISTRY, getProviderDefinition, ProviderDefinition } from './ai/registry';
+import { OPENAI_COMPATIBLE_API_KEY } from './providers/openaiCompatible';
 
 export async function setApiKeyCommand(context: vscode.ExtensionContext): Promise<void> {
   const providersWithKeys = PROVIDER_REGISTRY.filter((p) => !!p.configKey);
@@ -50,6 +51,42 @@ export async function setApiKeyCommand(context: vscode.ExtensionContext): Promis
 
   await context.secrets.store(diffProvider.configKey, key.trim());
   vscode.window.showInformationMessage(`API key for ${diffProvider.label} saved.`);
+}
+
+export async function setOpenAiCompatibleApiKeyCommand(
+  context: vscode.ExtensionContext,
+): Promise<void> {
+  const key = await vscode.window.showInputBox({
+    prompt: 'Enter API_KEY for OpenAI compatible provider',
+    password: true,
+    ignoreFocusOut: true,
+    validateInput: (v) => (v.trim().length === 0 ? 'API_KEY cannot be empty' : undefined),
+  });
+
+  if (!key) {
+    return;
+  }
+
+  await context.secrets.store(OPENAI_COMPATIBLE_API_KEY, key.trim());
+  vscode.window.showInformationMessage('OpenAI compatible API_KEY saved.');
+}
+
+export async function setOpenAiCompatibleBaseUrlCommand(): Promise<void> {
+  const config = vscode.workspace.getConfiguration('predicteCommit');
+  const current = config.get<string>('openaiBaseUrl', '');
+  const baseUrl = await vscode.window.showInputBox({
+    prompt: 'Enter API_BASE_URL for OpenAI compatible provider',
+    value: current,
+    ignoreFocusOut: true,
+    validateInput: (v) => (v.trim().length === 0 ? 'API_BASE_URL cannot be empty' : undefined),
+  });
+
+  if (!baseUrl) {
+    return;
+  }
+
+  await config.update('openaiBaseUrl', baseUrl.trim(), vscode.ConfigurationTarget.Global);
+  vscode.window.showInformationMessage('OpenAI compatible API_BASE_URL saved.');
 }
 
 function showMissingKeyNotification(context: vscode.ExtensionContext, providerLabel: string): void {
