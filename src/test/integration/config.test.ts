@@ -1,65 +1,69 @@
 import * as assert from 'assert';
 import { getConfig } from '../../core/config';
 import { PredicteCommitConfig } from '../../core/types';
-import { getEffectiveProviderId } from '../../core/logic';
-import { DEFAULT_LOCAL_URL } from '../../core/constants';
+import { getEffectiveProviderId, isLocalMode } from '../../core/logic';
 import { DEFAULT_SYSTEM_PROMPT } from '../../ai/prompt';
 
 suite('Config Test Suite', () => {
   test('getEffectiveProviderId', () => {
-    // Test 1: useLocal is true -> should return 'ollama' (renamed from local)
-    const cfgLocal: PredicteCommitConfig = {
-      provider: 'mistral',
-      useLocal: true,
-      localProvider: 'ollama',
-      models: [],
-      ignoredFiles: [],
+    const baseCfg: PredicteCommitConfig = {
+      mode: 'remote',
+      remote: { provider: 'mistral', models: [], baseUrl: '', model: '' },
+      local: { provider: 'ollama', baseUrl: '', model: '' },
+      proxy: { url: '', noProxy: [] },
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
-      openaiBaseUrl: '',
-      openaiModel: '',
-      localBaseUrl: '',
-      localModel: '',
+      ignoredFiles: [],
       debugLogging: false,
     };
-    assert.strictEqual(getEffectiveProviderId(cfgLocal), 'ollama');
 
-    const cfgLocalVllm: PredicteCommitConfig = {
-      ...cfgLocal,
-      localProvider: 'vllm',
-    };
-    assert.strictEqual(getEffectiveProviderId(cfgLocalVllm), 'vllm');
+    // Local mode -> returns local.provider
+    assert.strictEqual(getEffectiveProviderId({ ...baseCfg, mode: 'local' }), 'ollama');
+    assert.strictEqual(
+      getEffectiveProviderId({
+        ...baseCfg,
+        mode: 'local',
+        local: { ...baseCfg.local, provider: 'vllm' },
+      }),
+      'vllm',
+    );
 
-    // Test 2: useLocal is false -> should return provider
-    const cfgMistral: PredicteCommitConfig = {
-      ...cfgLocal,
-      useLocal: false,
-      provider: 'mistral',
-    };
-    assert.strictEqual(getEffectiveProviderId(cfgMistral), 'mistral');
+    // Remote mode -> returns remote.provider
+    assert.strictEqual(getEffectiveProviderId(baseCfg), 'mistral');
+    assert.strictEqual(
+      getEffectiveProviderId({
+        ...baseCfg,
+        remote: { ...baseCfg.remote, provider: 'openai-compatible' },
+      }),
+      'openai-compatible',
+    );
+  });
 
-    // Test 3: provider is ollama (explicit)
-    const cfgLocalExplicit: PredicteCommitConfig = {
-      ...cfgLocal,
-      useLocal: false,
-      provider: 'ollama',
+  test('isLocalMode', () => {
+    const cfg: PredicteCommitConfig = {
+      mode: 'remote',
+      remote: { provider: 'mistral', models: [], baseUrl: '', model: '' },
+      local: { provider: 'ollama', baseUrl: '', model: '' },
+      proxy: { url: '', noProxy: [] },
+      systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      ignoredFiles: [],
+      debugLogging: false,
     };
-    assert.strictEqual(getEffectiveProviderId(cfgLocalExplicit), 'ollama');
+
+    assert.strictEqual(isLocalMode(cfg), false);
+    assert.strictEqual(isLocalMode({ ...cfg, mode: 'local' }), true);
   });
 
   test('getConfig defaults', () => {
-    // This test relies on the mock implementation of vscode.workspace.getConfiguration
-    // defined in unit-test-setup.js
     const cfg = getConfig();
-    // The mock returns the default value passed to .get(key, default)
-    // config.ts: cfg.get<string>('provider', 'mistral')
-    assert.strictEqual(cfg.provider, 'mistral');
-    assert.strictEqual(cfg.useLocal, false);
-    assert.strictEqual(cfg.localProvider, 'ollama');
+    assert.strictEqual(cfg.mode, 'remote');
+    assert.strictEqual(cfg.remote.provider, 'mistral');
+    assert.deepStrictEqual(cfg.remote.models, []);
+    assert.strictEqual(cfg.remote.baseUrl, '');
+    assert.strictEqual(cfg.remote.model, '');
+    assert.strictEqual(cfg.local.provider, 'ollama');
+    assert.strictEqual(cfg.local.baseUrl, '');
+    assert.strictEqual(cfg.local.model, '');
     assert.deepStrictEqual(cfg.ignoredFiles, ['*-lock.json', '*.svg', 'dist/**']);
     assert.strictEqual(cfg.systemPrompt, DEFAULT_SYSTEM_PROMPT);
-    assert.strictEqual(cfg.openaiBaseUrl, '');
-    assert.strictEqual(cfg.openaiModel, '');
-    assert.strictEqual(cfg.localBaseUrl, DEFAULT_LOCAL_URL);
-    assert.strictEqual(cfg.localModel, '');
   });
 });

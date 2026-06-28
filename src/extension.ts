@@ -8,10 +8,25 @@ import {
   setOpenAiCompatibleApiKeyCommand,
   setOpenAiCompatibleBaseUrlCommand,
 } from './commands';
+import { getConfig } from './core/config';
+import { setProxyConfig } from './ai/http';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+function applyProxySettings(): void {
+  const cfg = getConfig();
+  setProxyConfig(cfg.proxy.url, cfg.proxy.noProxy);
+}
+
 export function activate(context: vscode.ExtensionContext) {
+  applyProxySettings();
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('predicteCommit.proxy')) {
+        applyProxySettings();
+      }
+    }),
+  );
+
   void maybePromptForApiKeyOnStartup(context);
 
   context.subscriptions.push(

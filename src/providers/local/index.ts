@@ -1,7 +1,6 @@
 import { postChatCompletion } from '../../ai/http';
 import type { GenerateRequest, GenerateResult, ProviderClient } from '../../ai/types';
 import { registerProvider } from '../../ai/registry';
-import { DEFAULT_LOCAL_URL } from '../../core/constants';
 
 export class LocalProvider implements ProviderClient {
   constructor(
@@ -25,16 +24,12 @@ export class LocalProvider implements ProviderClient {
 
 const createLocalProvider = (id: string, defaultUrl: string) => {
   return async (_context: any, config: any) => {
-    let baseUrl = config.localBaseUrl;
-    // If the user hasn't changed the URL (it's empty),
-    // then use that provider's default.
-    // Otherwise (user changed it), use what's in config.
-    if (baseUrl === DEFAULT_LOCAL_URL) {
-      // DEFAULT_LOCAL_URL is ''
+    let baseUrl = config.local.baseUrl;
+    if (!baseUrl) {
       baseUrl = defaultUrl;
     }
 
-    const model = config.models.length > 0 ? config.models[0] : config.localModel;
+    const model = config.remote.models.length > 0 ? config.remote.models[0] : config.local.model;
     return new LocalProvider(id, baseUrl, model);
   };
 };

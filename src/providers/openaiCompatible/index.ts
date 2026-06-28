@@ -57,8 +57,9 @@ registerProvider({
   configKey: OPENAI_COMPATIBLE_API_KEY,
   create: async (context, config) => {
     const apiKey = (await context.secrets.get(OPENAI_COMPATIBLE_API_KEY)) ?? '';
-    const baseUrl = config.openaiBaseUrl.trim();
-    const models = config.models.length > 0 ? config.models : [config.openaiModel.trim()];
+    const baseUrl = config.remote.baseUrl.trim();
+    const models =
+      config.remote.models.length > 0 ? config.remote.models : [config.remote.model.trim()];
 
     if (!baseUrl) {
       throw new Error('OpenAI compatible API base URL is not configured.');

@@ -58,7 +58,7 @@ registerProvider({
   configKey: MISTRAL_API_KEY,
   create: async (context, config) => {
     const key = (await context.secrets.get(MISTRAL_API_KEY)) ?? '';
-    const models = config.models.length > 0 ? config.models : DEFAULT_MODELS;
+    const models = config.remote.models.length > 0 ? config.remote.models : DEFAULT_MODELS;
     return new MistralProvider(key, models);
   },
 });

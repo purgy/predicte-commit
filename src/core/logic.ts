@@ -1,9 +1,12 @@
 import { PredicteCommitConfig } from './types';
 
+export function isLocalMode(cfg: PredicteCommitConfig): boolean {
+  return cfg.mode === 'local';
+}
+
 export function getEffectiveProviderId(cfg: PredicteCommitConfig): string {
-  // Backwards compatibility: existing users may rely on useLocal.
-  if (cfg.useLocal) {
-    return cfg.localProvider?.trim() || 'ollama';
+  if (cfg.mode === 'local') {
+    return cfg.local.provider;
   }
-  return cfg.provider;
+  return cfg.remote.provider;
 }

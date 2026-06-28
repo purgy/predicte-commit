@@ -73,7 +73,7 @@ export async function setOpenAiCompatibleApiKeyCommand(
 
 export async function setOpenAiCompatibleBaseUrlCommand(): Promise<void> {
   const config = vscode.workspace.getConfiguration('predicteCommit');
-  const current = config.get<string>('openaiBaseUrl', '');
+  const current = config.get<string>('remote.baseUrl', '');
   const baseUrl = await vscode.window.showInputBox({
     prompt: 'Enter API_BASE_URL for OpenAI compatible provider',
     value: current,
@@ -85,7 +85,7 @@ export async function setOpenAiCompatibleBaseUrlCommand(): Promise<void> {
     return;
   }
 
-  await config.update('openaiBaseUrl', baseUrl.trim(), vscode.ConfigurationTarget.Global);
+  await config.update('remote.baseUrl', baseUrl.trim(), vscode.ConfigurationTarget.Global);
   vscode.window.showInformationMessage('OpenAI compatible API_BASE_URL saved.');
 }
 

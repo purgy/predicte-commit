@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { postChatCompletion } from '../../ai/http';
+import { postChatCompletion, _setFetchForTesting } from '../../ai/http';
 import { ProviderError } from '../../ai/errors';
 
 suite('HTTP Error Handling', () => {
@@ -19,10 +19,9 @@ suite('HTTP Error Handling', () => {
   });
 
   test('retries with stream=true when provider requires it', async () => {
-    const originalFetch = globalThis.fetch;
     const requests: Array<{ body?: string }> = [];
 
-    globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+    const mockFetch = async (_input: string | URL | Request, init?: any): Promise<Response> => {
       requests.push({ body: typeof init?.body === 'string' ? init.body : undefined });
       if (requests.length === 1) {
         return new Response(
@@ -47,7 +46,9 @@ suite('HTTP Error Handling', () => {
           headers: { 'Content-Type': 'text/event-stream' },
         },
       );
-    }) as typeof fetch;
+    };
+
+    _setFetchForTesting(mockFetch as any);
 
     try {
       const result = await postChatCompletion('https://example.com/v1/chat/completions', 'key', {
@@ -60,20 +61,19 @@ suite('HTTP Error Handling', () => {
       assert.strictEqual(JSON.parse(requests[0].body ?? '{}').stream, undefined);
       assert.strictEqual(JSON.parse(requests[1].body ?? '{}').stream, true);
     } finally {
-      globalThis.fetch = originalFetch;
+      _setFetchForTesting((await import('undici')).fetch as any);
     }
   });
 
   test('uses proxy dispatcher when HTTPS_PROXY is set', async () => {
-    const originalFetch = globalThis.fetch;
     const originalHttpProxy = process.env.HTTP_PROXY;
     const originalHttpsProxy = process.env.HTTPS_PROXY;
     delete process.env.HTTP_PROXY;
     process.env.HTTPS_PROXY = 'http://proxy.local:8080';
 
     let dispatcherSeen: unknown;
-    globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
-      dispatcherSeen = (init as RequestInit & { dispatcher?: unknown })?.dispatcher;
+    const mockFetch = async (_input: string | URL | Request, init?: any): Promise<Response> => {
+      dispatcherSeen = init?.dispatcher;
       return new Response(
         JSON.stringify({
           choices: [{ message: { content: 'feat: proxy support' } }],
@@ -84,7 +84,9 @@ suite('HTTP Error Handling', () => {
           headers: { 'Content-Type': 'application/json' },
         },
       );
-    }) as typeof fetch;
+    };
+
+    _setFetchForTesting(mockFetch as any);
 
     try {
       const result = await postChatCompletion('https://example.com/v1/chat/completions', 'key', {
@@ -95,7 +97,7 @@ suite('HTTP Error Handling', () => {
       assert.strictEqual(result, 'feat: proxy support');
       assert.ok(dispatcherSeen, 'Expected a proxy dispatcher to be passed to fetch');
     } finally {
-      globalThis.fetch = originalFetch;
+      _setFetchForTesting((await import('undici')).fetch as any);
       if (originalHttpProxy === undefined) {
         delete process.env.HTTP_PROXY;
       } else {
@@ -110,15 +112,14 @@ suite('HTTP Error Handling', () => {
   });
 
   test('skips proxy dispatcher when NO_PROXY matches target host', async () => {
-    const originalFetch = globalThis.fetch;
     const originalHttpsProxy = process.env.HTTPS_PROXY;
     const originalNoProxy = process.env.NO_PROXY;
     process.env.HTTPS_PROXY = 'http://proxy.local:8080';
     process.env.NO_PROXY = 'example.com';
 
     let dispatcherSeen: unknown;
-    globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
-      dispatcherSeen = (init as RequestInit & { dispatcher?: unknown })?.dispatcher;
+    const mockFetch = async (_input: string | URL | Request, init?: any): Promise<Response> => {
+      dispatcherSeen = init?.dispatcher;
       return new Response(
         JSON.stringify({
           choices: [{ message: { content: 'feat: bypass proxy' } }],
@@ -129,7 +130,9 @@ suite('HTTP Error Handling', () => {
           headers: { 'Content-Type': 'application/json' },
         },
       );
-    }) as typeof fetch;
+    };
+
+    _setFetchForTesting(mockFetch as any);
 
     try {
       const result = await postChatCompletion('https://example.com/v1/chat/completions', 'key', {
@@ -140,7 +143,7 @@ suite('HTTP Error Handling', () => {
       assert.strictEqual(result, 'feat: bypass proxy');
       assert.strictEqual(dispatcherSeen, undefined);
     } finally {
-      globalThis.fetch = originalFetch;
+      _setFetchForTesting((await import('undici')).fetch as any);
       if (originalHttpsProxy === undefined) {
         delete process.env.HTTPS_PROXY;
       } else {

@@ -22,20 +22,15 @@ suite('AI Selector Test Suite', () => {
     });
 
     const configMock: PredicteCommitConfig = {
-      provider: 'test-provider',
-      useLocal: false,
-      localProvider: 'ollama',
-      models: [],
-      ignoredFiles: [],
+      mode: 'remote',
+      remote: { provider: 'test-provider', models: [], baseUrl: '', model: '' },
+      local: { provider: 'ollama', baseUrl: '', model: '' },
+      proxy: { url: '', noProxy: [] },
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
-      openaiBaseUrl: '',
-      openaiModel: '',
-      localBaseUrl: '',
-      localModel: '',
+      ignoredFiles: [],
       debugLogging: false,
     };
 
-    // Mock context (any, as our mock provider ignores it)
     const contextMock: any = {};
 
     const client = await selectProvider(contextMock, configMock);
@@ -44,16 +39,12 @@ suite('AI Selector Test Suite', () => {
 
   test('selectProvider throws on unknown provider', async () => {
     const configMock: PredicteCommitConfig = {
-      provider: 'unknown-provider',
-      useLocal: false,
-      localProvider: 'ollama',
-      models: [],
-      ignoredFiles: [],
+      mode: 'remote',
+      remote: { provider: 'unknown-provider', models: [], baseUrl: '', model: '' },
+      local: { provider: 'ollama', baseUrl: '', model: '' },
+      proxy: { url: '', noProxy: [] },
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
-      openaiBaseUrl: '',
-      openaiModel: '',
-      localBaseUrl: '',
-      localModel: '',
+      ignoredFiles: [],
       debugLogging: false,
     };
 
@@ -64,16 +55,12 @@ suite('AI Selector Test Suite', () => {
 
   test('selectProvider instantiates Mistral with context', async () => {
     const configMock: PredicteCommitConfig = {
-      provider: 'mistral',
-      useLocal: false,
-      localProvider: 'ollama',
-      models: [],
-      ignoredFiles: [],
+      mode: 'remote',
+      remote: { provider: 'mistral', models: [], baseUrl: '', model: '' },
+      local: { provider: 'ollama', baseUrl: '', model: '' },
+      proxy: { url: '', noProxy: [] },
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
-      openaiBaseUrl: '',
-      openaiModel: '',
-      localBaseUrl: '',
-      localModel: '',
+      ignoredFiles: [],
       debugLogging: false,
     };
 
@@ -89,16 +76,17 @@ suite('AI Selector Test Suite', () => {
 
   test('selectProvider instantiates OpenAI compatible provider with context', async () => {
     const configMock: PredicteCommitConfig = {
-      provider: 'openai-compatible',
-      useLocal: false,
-      localProvider: 'ollama',
-      models: [],
-      ignoredFiles: [],
+      mode: 'remote',
+      remote: {
+        provider: 'openai-compatible',
+        models: [],
+        baseUrl: 'https://example.com/v1',
+        model: 'gpt-4o-mini',
+      },
+      local: { provider: 'ollama', baseUrl: '', model: '' },
+      proxy: { url: '', noProxy: [] },
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
-      openaiBaseUrl: 'https://example.com/v1',
-      openaiModel: 'gpt-4o-mini',
-      localBaseUrl: '',
-      localModel: '',
+      ignoredFiles: [],
       debugLogging: false,
     };
 

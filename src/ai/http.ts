@@ -1,5 +1,5 @@
 import { ProviderError } from './errors';
-import { ProxyAgent } from 'undici';
+import { ProxyAgent, fetch as undiciFetch } from 'undici';
 
 type ChatCompletionRequest = {
   model: string;
@@ -7,11 +7,42 @@ type ChatCompletionRequest = {
   stream?: boolean;
 };
 
-type FetchRequestInit = RequestInit & {
+type FetchRequestInit = {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  signal?: AbortSignal;
   dispatcher?: InstanceType<typeof ProxyAgent>;
 };
 
 const proxyAgents = new Map<string, InstanceType<typeof ProxyAgent>>();
+
+let extensionProxyUrl = '';
+let extensionNoProxy: string[] = [];
+
+// Allow tests to override fetch implementation
+let _fetch: typeof undiciFetch = undiciFetch;
+export function _setFetchForTesting(fn: typeof undiciFetch): void {
+  _fetch = fn;
+}
+
+function proxyLog(msg: string): void {
+  try {
+    // Lazy import to avoid vscode dependency in tests
+    const { getOutputChannel } = require('../core/logging') as typeof import('../core/logging');
+    getOutputChannel().appendLine(msg);
+  } catch {
+    console.log(msg);
+  }
+}
+
+export function setProxyConfig(url: string, noProxy: string[]): void {
+  extensionProxyUrl = url.trim();
+  extensionNoProxy = noProxy;
+  proxyLog(
+    `[proxy] settings loaded: url="${extensionProxyUrl}", noProxy=${JSON.stringify(extensionNoProxy)}`,
+  );
+}
 
 function withTimeout(ms: number): AbortController {
   const controller = new AbortController();
@@ -45,29 +76,39 @@ function matchesNoProxy(target: URL, entry: string): boolean {
   return hostname === hostPattern || hostname.endsWith(`.${hostPattern}`);
 }
 
-function shouldBypassProxy(targetUrl: string): boolean {
-  const noProxy = getEnvValue('NO_PROXY');
-  if (!noProxy) {
+function shouldBypassProxy(targetUrl: string, noProxyList: string[]): boolean {
+  if (noProxyList.length === 0) {
     return false;
   }
 
   const target = new URL(targetUrl);
-  return noProxy
-    .split(/[,\s]+/)
-    .filter((entry) => entry.length > 0)
-    .some((entry) => matchesNoProxy(target, entry));
+  return noProxyList.some((entry) => matchesNoProxy(target, entry));
 }
 
 function getProxyConfig(targetUrl: string): { proxyUrl?: string; envName?: string } {
   const target = new URL(targetUrl);
 
-  if (shouldBypassProxy(targetUrl)) {
+  // 1. Extension settings proxy (highest priority)
+  if (extensionProxyUrl) {
+    if (shouldBypassProxy(targetUrl, extensionNoProxy)) {
+      proxyLog(`[proxy] bypass for ${target.hostname} (extension noProxy)`);
+      return {};
+    }
+    proxyLog(`[proxy] using extension proxy "${extensionProxyUrl}" for ${target.hostname}`);
+    return { proxyUrl: extensionProxyUrl, envName: 'predicteCommit.proxy.url' };
+  }
+
+  // 2. Environment variables (fallback)
+  const envNoProxy = getEnvValue('NO_PROXY')?.split(/[,\s]+/) ?? [];
+  if (shouldBypassProxy(targetUrl, envNoProxy)) {
+    proxyLog(`[proxy] bypass for ${target.hostname} (env NO_PROXY)`);
     return {};
   }
 
   if (target.protocol === 'https:') {
     const httpsProxy = getEnvValue('HTTPS_PROXY');
     if (httpsProxy) {
+      proxyLog(`[proxy] using env HTTPS_PROXY="${httpsProxy}" for ${target.hostname}`);
       return {
         proxyUrl: httpsProxy,
         envName: process.env.HTTPS_PROXY ? 'HTTPS_PROXY' : 'https_proxy',
@@ -76,6 +117,7 @@ function getProxyConfig(targetUrl: string): { proxyUrl?: string; envName?: strin
 
     const httpProxy = getEnvValue('HTTP_PROXY');
     if (httpProxy) {
+      proxyLog(`[proxy] using env HTTP_PROXY="${httpProxy}" for ${target.hostname}`);
       return { proxyUrl: httpProxy, envName: process.env.HTTP_PROXY ? 'HTTP_PROXY' : 'http_proxy' };
     }
   }
@@ -83,10 +125,12 @@ function getProxyConfig(targetUrl: string): { proxyUrl?: string; envName?: strin
   if (target.protocol === 'http:') {
     const httpProxy = getEnvValue('HTTP_PROXY');
     if (httpProxy) {
+      proxyLog(`[proxy] using env HTTP_PROXY="${httpProxy}" for ${target.hostname}`);
       return { proxyUrl: httpProxy, envName: process.env.HTTP_PROXY ? 'HTTP_PROXY' : 'http_proxy' };
     }
   }
 
+  proxyLog(`[proxy] no proxy for ${target.hostname}`);
   return {};
 }
 
@@ -142,7 +186,7 @@ async function postChatCompletionOnce(
     headers.Authorization = `Bearer ${apiKey}`;
   }
 
-  let res: Response;
+  let res: Awaited<ReturnType<typeof undiciFetch>>;
   try {
     const init: FetchRequestInit = {
       method: 'POST',
@@ -156,7 +200,7 @@ async function postChatCompletionOnce(
       init.dispatcher = dispatcher;
     }
 
-    res = await fetch(url, init);
+    res = await _fetch(url, init);
   } catch (e) {
     if (e instanceof Error) {
       if (e.name === 'AbortError') {
